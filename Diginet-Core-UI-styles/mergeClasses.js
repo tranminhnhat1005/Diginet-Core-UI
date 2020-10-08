@@ -1,4 +1,4 @@
-import {getDisplayName} from '../../../utils/Diginet-Core-UI/getDisplayName';
+import {getDisplayName} from '../Diginet-Core-UI-utils';
 
 const mergeClasses = (options = {}) => {
   const {baseClasses, newClasses, Component} = options;

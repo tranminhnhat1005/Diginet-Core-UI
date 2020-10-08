@@ -1,13 +1,14 @@
 /* eslint-disable react-hooks/rules-of-hooks */
-import React from 'react';
 import PropTypes from 'prop-types';
-import hoistNonReactStatics
-  from '../../../utils/Diginet-Core-UI/hoistNonReactStatics';
-import {chainPropTypes} from '../../../utils/Diginet-Core-UI/chainPropTypes';
-import {getDisplayName} from '../../../utils/Diginet-Core-UI/getDisplayName';
-import makeStyles from './makeStyles/makeStyles';
+import React from 'react';
+import {
+  chainPropTypes,
+  getDisplayName,
+  hoistNonReactStatics,
+} from '../Diginet-Core-UI-utils';
 import getThemeProps from './getThemeProps';
-import useTheme from './useTheme/useTheme';
+import makeStyles from './makeStyles';
+import useTheme from './useTheme';
 
 const withStyles = (stylesOrCreator, options = {}) => Component => {
   const {defaultTheme, withTheme = false, name, ...stylesOptions} = options;

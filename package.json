@@ -17,6 +17,7 @@
   },
   "homepage": "https://github.com/tranminhnhat1005/Diginet-Core-UI#readme",
   "dependencies": {
+    "clsx": "^1.1.1",
     "prop-types": "^15.7.2",
     "react": "^16.13.1",
     "react-dom": "^16.13.1"
