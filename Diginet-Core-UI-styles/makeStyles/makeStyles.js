@@ -1,7 +1,9 @@
 /* eslint-disable react-hooks/rules-of-hooks */
 import {useContext, useDebugValue, useEffect, useMemo, useRef} from 'react';
 import {StylesContext} from '../StylesProvider';
-import {getDynamicStyles} from '../../../../utils/Diginet-Core-UI/getDynamicStyles';
+import {
+  getDynamicStyles,
+} from '../../../../utils/Diginet-Core-UI/getDynamicStyles';
 import getStylesCreator from '../getStylesCreator';
 import {increment} from './indexCounter';
 import mergeClasses from '../mergeClasses';
@@ -187,7 +189,7 @@ const useSynchronousEffect = (func, values) => {
   const key = useRef ([]);
   let output;
 
-  const currentKey = useMemo (() => ({}), values); // eslint-disable-line react-hooks/exhaustive-deps
+  const currentKey = useMemo (() => ({}), values);
 
   if (key.current !== currentKey) {
     key.current = currentKey;
@@ -200,7 +202,6 @@ const useSynchronousEffect = (func, values) => {
         output ();
       }
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     [currentKey]
   );
 };

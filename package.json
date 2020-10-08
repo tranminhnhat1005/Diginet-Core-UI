@@ -1,0 +1,24 @@
+{
+  "name": "diginet-core-ui",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tranminhnhat1005/Diginet-Core-UI.git"
+  },
+  "author": "Tran Nhat",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/tranminhnhat1005/Diginet-Core-UI/issues"
+  },
+  "homepage": "https://github.com/tranminhnhat1005/Diginet-Core-UI#readme",
+  "dependencies": {
+    "prop-types": "^15.7.2",
+    "react": "^16.13.1",
+    "react-dom": "^16.13.1"
+  }
+}
