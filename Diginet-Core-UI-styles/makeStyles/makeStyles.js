@@ -1,15 +1,13 @@
 /* eslint-disable react-hooks/rules-of-hooks */
 import {useContext, useDebugValue, useEffect, useMemo, useRef} from 'react';
 import {StylesContext} from '../StylesProvider';
-import {
-  getDynamicStyles,
-} from '../../../../utils/Diginet-Core-UI/getDynamicStyles';
+import {noopTheme} from '../../Diginet-Core-UI-utils';
 import getStylesCreator from '../getStylesCreator';
 import {increment} from './indexCounter';
 import mergeClasses from '../mergeClasses';
 import multiKeyStore from './multiKeyStore';
-import noopTheme from '../../../../utils/Diginet-Core-UI/noopTheme';
 import useTheme from '../useTheme/useTheme';
+import jss, {getDynamicStyles, createStyleSheet} from 'jss';
 
 const getClasses = ({state, stylesOptions}, classes, Component) => {
   if (stylesOptions.disableGeneration) {

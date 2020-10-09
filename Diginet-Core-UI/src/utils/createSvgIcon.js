@@ -1,5 +1,5 @@
 import React from 'react';
-import SvgIcon from '../SvgIcon';
+import SvgIcon from '../components/SvgIcon';
 
 export default function createSvgIcon (path, displayName) {
   const Component = (props, ref) => (

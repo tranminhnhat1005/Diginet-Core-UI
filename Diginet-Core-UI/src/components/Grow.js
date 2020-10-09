@@ -1,6 +1,6 @@
 import React, {useEffect, useRef} from 'react';
 import PropTypes from 'prop-types';
-import {Transition} from '../styles/react-transition-group/Transition';
+import Transition from '../styles/react-transition-group/Transition';
 import useTheme from '../styles/useTheme';
 import {reflow, getTransitionProps} from './transitions/utils';
 import useForkRef from '../utils/useForkRef';

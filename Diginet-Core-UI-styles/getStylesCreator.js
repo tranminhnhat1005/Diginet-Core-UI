@@ -1,5 +1,4 @@
-import {deepMerge} from '../../../utils/Diginet-Core-UI/deepMerge';
-import noopTheme from '../../../utils/Diginet-Core-UI/noopTheme';
+import {deepMerge, noopTheme} from '../Diginet-Core-UI-utils';
 
 const getStylesCreator = stylesOrCreator => {
   const themingEnabled = typeof stylesOrCreator === 'function';

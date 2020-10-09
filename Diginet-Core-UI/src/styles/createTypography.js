@@ -1,4 +1,4 @@
-import {deepMerge} from '../utils/Diginet-Core-UI/deepMerge';
+import {deepMerge} from '../../../Diginet-Core-UI-utils';
 import {round} from '../utils/round';
 
 const caseAllCaps = {

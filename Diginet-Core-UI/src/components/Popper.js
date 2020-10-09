@@ -14,7 +14,7 @@ import {
   refType,
 } from '../../../Diginet-Core-UI-utils';
 import {createChainedFunction, setRef, useForkRef} from '../utils';
-import PopperJs from '../utils/popper';
+import {createPopper} from '../utils/popper';
 import Portal from './Portal';
 
 const flipPlacement = (placement, theme) => {
@@ -130,7 +130,7 @@ const Popper = React.forwardRef (function Popper (props, ref) {
         }
       }
 
-      const popper = new PopperJs (getAnchorEl (anchorEl), tooltipRef.current, {
+      const popper = new createPopper (getAnchorEl (anchorEl), tooltipRef.current, {
         placement: rtlPlacement,
         ...popperOptions,
         modifiers: {

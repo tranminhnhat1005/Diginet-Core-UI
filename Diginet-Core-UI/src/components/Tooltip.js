@@ -1,18 +1,28 @@
-import React from 'react';
-import ReactDOM from 'react-dom';
-import PropTypes from 'prop-types';
 import clsx from 'clsx';
+import PropTypes from 'prop-types';
+import React, {
+  cloneElement,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useCallback,
+} from 'react';
+import ReactDOM from 'react-dom';
 import {deepMerge, elementAcceptingRef} from '../../../Diginet-Core-UI-utils';
-import { alpha } from '../styles/colorManipulator';
-import withStyles from '../styles/withStyles';
+import {alpha} from '../styles/colorManipulator';
+import {useTheme, withStyles} from '../styles';
+import {
+  capitalize,
+  round,
+  setRef,
+  useControlled,
+  useForkRef,
+  useId,
+  useIsFocusVisible,
+} from '../utils';
 import Grow from './Grow';
 import Popper from './Popper';
-import {useControlled, useIsFocusVisible, useId, useForkRef, capitalize, setRef} from '../utils';
-import useTheme from '../styles/useTheme';
-
-const round = value => {
-  return Math.round (value * 1e5) / 1e5;
-};
 
 const arrowGenerator = () => {
   return {
@@ -174,4 +184,384 @@ const Tooltip = React.forwardRef (function Tooltip (props, ref) {
     ...other
   } = props;
   const theme = useTheme ();
+
+  const [childNode, setChildNode] = useState ();
+  const [arrowRef, setArrowRef] = useState (null);
+  const ignoreNonTouchEvents = useRef (false);
+
+  const closeTimer = useRef ();
+  const enterTimer = useRef ();
+  const leaveTimer = useRef ();
+  const touchTimer = useRef ();
+
+  const [openState, setOpenState] = useControlled ({
+    controlled: openProp,
+    default: false,
+    name: 'Tooltip',
+    state: 'open',
+  });
+
+  let open = openState;
+
+  if (process.env.NODE_ENV !== 'production') {
+    // eslint-disable-next-line react-hooks/rules-of-hooks
+    const {current: isControlled} = useRef (openProp !== undefined);
+
+    // eslint-disable-next-line react-hooks/rules-of-hooks
+    useEffect (
+      () => {
+        if (
+          childNode &&
+          childNode.disabled &&
+          !isControlled &&
+          title !== '' &&
+          childNode.tagName.toLowerCase () === 'button'
+        ) {
+          console.error (
+            [
+              'Diginet-Core-UI: You are providing a disabled `button` child to the Tooltip component.',
+              'A disabled element does not fire events.',
+              "Tooltip needs to listen to the child element's events to display the title.",
+              '',
+              'Add a simple wrapper element, such as a `span`.',
+            ].join ('\n')
+          );
+        }
+      },
+      [title, childNode, isControlled]
+    );
+  }
+
+  const id = useId (idProp);
+
+  useEffect (() => {
+    return () => {
+      clearTimeout (closeTimer.current);
+      clearTimeout (enterTimer.current);
+      clearTimeout (leaveTimer.current);
+      clearTimeout (touchTimer.current);
+    };
+  }, []);
+
+  const handleOpen = event => {
+    clearTimeout (hystersisTimer);
+    hystersisOpen = true;
+
+    setOpenState (true);
+
+    if (onOpen) {
+      onOpen (event);
+    }
+  };
+
+  const handleEnter = (forward = true) => event => {
+    const childrenProps = children.props;
+
+    if (event.type === 'mouseover' && childrenProps.onMouseOver && forward) {
+      childrenProps.onMouseOver (event);
+    }
+
+    if (ignoreNonTouchEvents.current && event.type !== 'touchstart') {
+      return;
+    }
+    if (childNode) {
+      childNode.removeAttribute ('title');
+    }
+
+    clearTimeout (enterTimer.current);
+    clearTimeout (leaveTimer.current);
+    if (enterDelay || (hystersisOpen && enterNextDelay)) {
+      event.persist ();
+      enterTimer.current = setTimeout (() => {
+        handleOpen (event);
+      }, hystersisOpen ? enterNextDelay : enterDelay);
+    } else {
+      handleOpen (event);
+    }
+  };
+
+  const {
+    isFocusVisible,
+    onBlurVisible,
+    ref: focusVisibleRef,
+  } = useIsFocusVisible ();
+  const [childIsFocusVisible, setChildIsFocusVisible] = useState (false);
+  const handleBlur = () => {
+    if (childIsFocusVisible) {
+      setChildIsFocusVisible (false);
+      onBlurVisible ();
+    }
+  };
+
+  const handleFocus = (forward = true) => event => {
+    // Workaround for https://github.com/facebook/react/issues/7769
+    // The autoFocus of React might trigger the event before the componentDidMount.
+    // We need to account for this eventuality.
+    if (!childNode) {
+      setChildNode (event.currentTarget);
+    }
+
+    if (isFocusVisible (event)) {
+      setChildIsFocusVisible (true);
+      handleEnter () (event);
+    }
+
+    const childrenProps = children.props;
+    if (childrenProps.onFocus && forward) {
+      childrenProps.onFocus (event);
+    }
+  };
+
+  const handleClose = event => {
+    clearTimeout (hystersisTimer);
+    hystersisTimer = setTimeout (() => {
+      hystersisOpen = false;
+    }, 800 + leaveDelay);
+    setOpenState (false);
+
+    if (onClose) {
+      onClose (event);
+    }
+
+    clearTimeout (closeTimer.current);
+    closeTimer.current = setTimeout (() => {
+      ignoreNonTouchEvents.current = false;
+    }, theme.transitions.duration.shortest);
+  };
+
+  const handleLeave = (forward = true) => event => {
+    const childrenProps = children.props;
+
+    if (event.type === 'blur') {
+      if (childrenProps.onBlur && forward) {
+        childrenProps.onBlur (event);
+      }
+      handleBlur ();
+    }
+
+    if (
+      event.type === 'mouseleave' &&
+      childrenProps.onMouseLeave &&
+      event.currentTarget === childNode
+    ) {
+      childrenProps.onMouseLeave (event);
+    }
+
+    clearTimeout (enterTimer.current);
+    clearTimeout (leaveTimer.current);
+    event.persist ();
+    leaveTimer.current = setTimeout (() => {
+      handleClose (event);
+    }, leaveDelay);
+  };
+
+  const detectTouchStart = event => {
+    ignoreNonTouchEvents.current = true;
+
+    const childrenProps = children.props;
+    if (childrenProps.onTouchStart) {
+      childrenProps.onTouchStart (event);
+    }
+  };
+
+  const handleTouchStart = event => {
+    detectTouchStart (event);
+    clearTimeout (leaveTimer.current);
+    clearTimeout (closeTimer.current);
+    clearTimeout (touchTimer.current);
+    event.persist ();
+    touchTimer.current = setTimeout (() => {
+      handleEnter () (event);
+    }, enterTouchDelay);
+  };
+
+  const handleTouchEnd = event => {
+    if (children.props.onTouchEnd) {
+      children.props.onTouchEnd (event);
+    }
+
+    clearTimeout (touchTimer.current);
+    clearTimeout (leaveTimer.current);
+    event.persist ();
+    leaveTimer.current = setTimeout (() => {
+      handleClose (event);
+    }, leaveTouchDelay);
+  };
+
+  const handleUseRef = useForkRef (setChildNode, ref);
+  const handleFocusRef = useForkRef (focusVisibleRef, handleUseRef);
+  // can be removed once we drop support for non ref forwarding class components
+  const handleOwnRef = useCallback (
+    instance => {
+      // #StrictMode ready
+      setRef (handleFocusRef, ReactDOM.findDOMNode (instance));
+    },
+    [handleFocusRef]
+  );
+
+  const handleRef = useForkRef (children.ref, handleOwnRef);
+
+  // There is no point in displaying an empty tooltip.
+  if (title === '') {
+    open = false;
+  }
+
+  const shouldShowNativeTitle = !open && !disableHoverListener;
+  const childrenProps = {
+    'aria-describedby': open ? id : null,
+    title: shouldShowNativeTitle && typeof title === 'string' ? title : null,
+    ...other,
+    ...children.props,
+    className: clsx (other.className, children.props.className),
+    onTouchStart: detectTouchStart,
+    ref: handleRef,
+  };
+
+  const interactiveWrapperListeners = {};
+
+  if (!disableTouchListener) {
+    childrenProps.onTouchStart = handleTouchStart;
+    childrenProps.onTouchEnd = handleTouchEnd;
+  }
+
+  if (!disableHoverListener) {
+    childrenProps.onMouseOver = handleEnter ();
+    childrenProps.onMouseLeave = handleLeave ();
+
+    if (interactive) {
+      interactiveWrapperListeners.onMouseOver = handleEnter (false);
+      interactiveWrapperListeners.onMouseLeave = handleLeave (false);
+    }
+  }
+
+  if (!disableFocusListener) {
+    childrenProps.onFocus = handleFocus ();
+    childrenProps.onBlur = handleLeave ();
+
+    if (interactive) {
+      interactiveWrapperListeners.onFocus = handleFocus (false);
+      interactiveWrapperListeners.onBlur = handleLeave (false);
+    }
+  }
+
+  if (process.env.NODE_ENV !== 'production') {
+    if (children.props.title) {
+      console.error (
+        [
+          'Diginet-Core-UI: You have provided a `title` prop to the child of <Tooltip />.',
+          `Remove this title prop \`${children.props.title}\` or the Tooltip component.`,
+        ].join ('\n')
+      );
+    }
+  }
+
+  const mergedPopperProps = useMemo (
+    () => {
+      return deepMerge (
+        {
+          popperOptions: {
+            modifiers: {
+              arrow: {
+                enabled: Boolean (arrowRef),
+                element: arrowRef,
+              },
+            },
+          },
+        },
+        PopperProps
+      );
+    },
+    [arrowRef, PopperProps]
+  );
+
+  return (
+    <React.Fragment>
+      {cloneElement (children, childrenProps)}
+      <PopperComponent
+        className={clsx (classes.popper, {
+          [classes.popperInteractive]: interactive,
+          [classes.popperArrow]: arrow,
+        })}
+        placement={placement}
+        anchorEl={childNode}
+        open={childNode ? open : false}
+        id={childrenProps['aria-describedby']}
+        transition
+        {...interactiveWrapperListeners}
+        {...mergedPopperProps}
+      >
+        {({
+          placement: placementInner,
+          TransitionProps: TransitionPropsInner,
+        }) => (
+          <TransitionComponent
+            timeout={theme.transitions.duration.shorter}
+            {...TransitionPropsInner}
+            {...TransitionProps}
+          >
+            <div
+              className={clsx (
+                classes.tooltip,
+                {
+                  [classes.touch]: ignoreNonTouchEvents.current,
+                  [classes.tooltipArrow]: arrow,
+                },
+                classes[
+                  `tooltipPlacement${capitalize (placementInner.split ('-')[0])}`
+                ]
+              )}
+            >
+              {title}
+              {arrow
+                ? <span className={classes.arrow} ref={setArrowRef} />
+                : null}
+            </div>
+          </TransitionComponent>
+        )}
+      </PopperComponent>
+    </React.Fragment>
+  );
 });
+
+Tooltip.propTypes = {
+  arrow: PropTypes.bool,
+  children: elementAcceptingRef.isRequired,
+  classes: PropTypes.object,
+  className: PropTypes.string,
+  disableFocusListener: PropTypes.bool,
+  disableHoverListener: PropTypes.bool,
+  disableTouchListener: PropTypes.bool,
+  enterDelay: PropTypes.number,
+  enterNextDelay: PropTypes.number,
+  enterTouchDelay: PropTypes.number,
+  id: PropTypes.string,
+  interactive: PropTypes.bool,
+  leaveDelay: PropTypes.number,
+  leaveTouchDelay: PropTypes.number,
+  onClose: PropTypes.func,
+  onOpen: PropTypes.func,
+  open: PropTypes.bool,
+  placement: PropTypes.oneOf ([
+    'bottom-end',
+    'bottom-start',
+    'bottom',
+    'left-end',
+    'left-start',
+    'left',
+    'right-end',
+    'right-start',
+    'right',
+    'top-end',
+    'top-start',
+    'top',
+  ]),
+  PopperComponent: PropTypes.elementType,
+  PopperProps: PropTypes.object,
+  title: PropTypes /* @typescript-to-proptypes-ignore */.node.isRequired,
+  TransitionComponent: PropTypes.elementType,
+  TransitionProps: PropTypes.object,
+};
+
+export default withStyles (styles, {name: 'DCUITooltip', flip: false}) (
+  Tooltip
+);
